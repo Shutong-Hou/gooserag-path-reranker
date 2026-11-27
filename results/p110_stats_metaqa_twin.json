@@ -1,0 +1,15 @@
+{
+ "n_paired": 2000,
+ "A_file": "/root/autodl-tmp/GooseRAG/data/rog_qa/dump_metaqa_p110_plain.json",
+ "B_file": "/root/autodl-tmp/GooseRAG/data/rog_qa/dump_metaqa_s2000_path.json",
+ "A_h1": 0.556,
+ "B_h1": 0.882,
+ "delta_pt": 32.599999999999994,
+ "b_Aonly": 61,
+ "c_Bonly": 713,
+ "mcnemar_p": 6.245306032837361e-142,
+ "boot_ci_pt": [
+  30.3,
+  34.901249999999976
+ ]
+}

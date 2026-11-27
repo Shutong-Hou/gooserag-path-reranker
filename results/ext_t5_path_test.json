@@ -1,0 +1,7 @@
+{
+ "model": "E:\\GooseRAG\\models\\t5-base",
+ "ckpt": "E:\\GooseRAG\\data\\rog_qa\\ext_t5_path.pt",
+ "path": true,
+ "n": 1627,
+ "hits1": 0.5722188076213891
+}

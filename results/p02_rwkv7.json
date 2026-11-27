@@ -1,0 +1,8 @@
+{
+ "backing": "rwkv7",
+ "ckpt": "verifier_ft_webqsp_rwkv7_listwise_path_s42.pt",
+ "n": 1627,
+ "h1": 0.5550092194222496,
+ "h5": 0.6988322065150584,
+ "in_cand": 0.7811923786109404
+}

@@ -1,0 +1,7 @@
+{
+ "model": "E:\\GooseRAG\\models\\Qwen2.5-0.5B-Instruct",
+ "path": true,
+ "n": 1627,
+ "hits1": 0.0743700061462815,
+ "max_pool": 100
+}

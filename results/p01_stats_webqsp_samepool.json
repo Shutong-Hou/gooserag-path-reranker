@@ -1,0 +1,34 @@
+{
+ "dataset": "webqsp",
+ "split": "test",
+ "n_paired": 1615,
+ "walker_h1": 0.17770897832817337,
+ "plain_argmax_vs_path_argmax": {
+  "A": "plain_argmax",
+  "B": "path_argmax",
+  "A_h1": 0.4198142414860681,
+  "B_h1": 0.5591331269349845,
+  "delta_pt": 13.93188854489164,
+  "b_Aonly": 96,
+  "c_Bonly": 321,
+  "mcnemar_p": 1.9998691002775385e-29,
+  "boot_ci_pt": [
+   11.51702786377709,
+   16.346749226006192
+  ]
+ },
+ "plain_fused_vs_path_fused": {
+  "A": "plain_fused",
+  "B": "path_fused",
+  "A_h1": 0.48297213622291024,
+  "B_h1": 0.5659442724458205,
+  "delta_pt": 8.297213622291022,
+  "b_Aonly": 99,
+  "c_Bonly": 233,
+  "mcnemar_p": 1.3500675210305422e-13,
+  "boot_ci_pt": [
+   6.068111455108359,
+   10.404024767801836
+  ]
+ }
+}

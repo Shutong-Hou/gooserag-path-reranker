@@ -1,0 +1,28 @@
+{
+ "dataset": "webqsp",
+ "split": "test",
+ "n": 1627,
+ "ks": [
+  100,
+  200
+ ],
+ "hits1_at": {
+  "100": 0.47080516287645974,
+  "200": 0.4794099569760295
+ },
+ "top5_at": {
+  "100": 0.6422864167178857,
+  "200": 0.6637984019668101
+ },
+ "walker_hits1": 0.17639827904118008,
+ "oracle_hits1": 0.48740012292563,
+ "oracle_avg_cost": 103.4047919293821,
+ "oracle_miss_rate": 0.51259987707437,
+ "verifier_ft": "/root/autodl-tmp/GooseRAG/data/rog_qa/verifier_ft_webqsp_rwkv7_listwise_beam200_s42.pt",
+ "beta": 2.0,
+ "gamma": 0.5,
+ "beam": 200,
+ "max_children": 128,
+ "max_hops": 2,
+ "verifier_feat_norm": "double"
+}

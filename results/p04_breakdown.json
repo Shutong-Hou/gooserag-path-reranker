@@ -1,0 +1,12 @@
+{
+ "dataset": "webqsp",
+ "split": "test",
+ "n": 200,
+ "beam_ms_mean": 73.32641124725342,
+ "verify_ms_mean": 204.55178499221802,
+ "total_ms_mean": 277.87819623947144,
+ "cand_mean": 171.005,
+ "peak_mem_gb": 2.9993128776550293,
+ "reserved_gb": 3.15625,
+ "note": "walker 与 verifier 分别实例化；共享权重部署下只保留一份 LM"
+}

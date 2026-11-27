@@ -1,0 +1,10 @@
+﻿torch>=2.5
+transformers==4.49.0
+fla==0.2.1
+numpy
+pandas
+pyarrow
+networkx
+scikit-learn
+huggingface_hub>=0.30
+sentencepiece

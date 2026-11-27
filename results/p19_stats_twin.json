@@ -1,0 +1,15 @@
+{
+ "n_paired": 1627,
+ "A_file": "../../data/rog_qa/dump_p18_plain_s43.json",
+ "B_file": "../../data/rog_qa/dump_p11_path_s43.json",
+ "A_h1": 0.4830977258758451,
+ "B_h1": 0.5488629379225568,
+ "delta_pt": 6.57652120467117,
+ "b_Aonly": 89,
+ "c_Bonly": 196,
+ "mcnemar_p": 2.1083189402436425e-10,
+ "boot_ci_pt": [
+  4.609711124769515,
+  8.60479409956976
+ ]
+}
