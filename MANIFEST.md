@@ -118,10 +118,10 @@
 | docs/GooseRAG_结果与定位.md | 78328 | b683aadd30f45bee97793f08a22a3331887c8a4f1e15df61da9bd0acd7a0c0e9 |
 | docs/GooseRAG_论文骨架.md | 9643 | 21982ca2ed3d189eaecc60a62a42f1a34a4313684253cbafcd99db4bf096e462 |
 | docs/实验台账.md | 39071 | cffafea5b36aa1ea29515f8d6d8696c73503ed4eeed9a28b8bc46148864ff0a2 |
-| paper/main.pdf | 686409 | 12157cf5a862969e229aebda0f7d0f679a87c2e00e5615ce90fa0a4686080c08 |
-| paper/main.tex | 40426 | 456974a126e43a545a7651b97e5698a78e9dc12e48dfc26b93d714fd41dcd4c8 |
-| paper/main_resource.pdf | 587867 | 6c1ec1e8b6eaa245318c65d66a6aaac9927fb7f1eaee85214b79d6f7a6fd5bec |
-| paper/main_resource.tex | 37327 | 43630c4e3c830dc3bd515b0af1196f483de2c7f28911e94f01bad45fd393b03b |
+| paper/main.pdf | 686431 | 38cabe58ba39f665ef9acbec499dd87f4611602a15d1e4b2f5c61a49827f1ab9 |
+| paper/main.tex | 40477 | 0908489aade33060631b4cce6e517eac3ee8618a0c7820e8b26ed56b2a5b3f4a |
+| paper/main_resource.pdf | 587882 | 68b85a00ef430a44fcd0559b0f518444c720de9d4cc1344e818c67c827545142 |
+| paper/main_resource.tex | 37392 | 5e73dd2a6d8f34a821da16472f60c6192288ec2e3557433a28951716ac876b24 |
 | paper/refs.bib | 7613 | 7a2637fb427ae7232a02486af3f8e1105e4ed3253b8723da26292143990fab9f |
 | results/_local_plain_full.json | 1045 | e87650ea60acfb62e1c4ab679fd0c7066ed201444ab34e1b9563281d9478edaa |
 | results/_tmp_mem_eval.json | 901 | f9d977f23d52b1f88b9312a71d3cee4943e6719db22d0d6d8f2315716a1d7900 |
