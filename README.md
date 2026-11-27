@@ -123,14 +123,44 @@ Expected values (see `results/` for the exact files):
 |---|---|---|
 | Table 1 (cumulative) | §4 above; `train_joint.py` for the last row | 44.19 / 47.94 / 56.12 / 57.22 / 58.03 |
 | Table 2 (twin, WebQSP) | `run_p18.sh` (plain twin) + `run_p11.sh` (path) + `_stats_pair.py` | 46.75±1.38 vs 54.89±0.12; paired +6.58, p=2.1e-10 |
-| Table 2 (twin, MetaQA) | `run_m4.ps1` (full set, local) | plain vs path full-set numbers (see results/p110_metaqa_*_full_*.json) |
+| Table 2 (twin, MetaQA) | `run_m4.ps1` (full 14,274-question test set) | plain 56.16±1.83 vs path 88.82±0.62 (Δ+32.66) |
 | Table 3 (one pool, five rankers) | `pool_table.py`, `_p01_samepool.py` | 17.77 / 41.98 / 48.30 / 55.91 / 56.59 / 57.60 |
 | Table 4 (RoG host) | `rog_plugplay.py` (n_beam 3 and 10) | 60.93 → 65.36 / 66.09; beam 10: 47.73 → 66.65 |
 | Table 5 (cost) | `_breakdown.py`, `_bench_lat.py`, `_bench_plugcost.py` | 278 ms = 73 + 205; +26 / +428 ms; 2.2 GB |
 | Table 6 (density) | `_dose_response.py`, `_webqsp_hop.py`, `_metaqa_hop.py` | see §5.6 of the paper |
-| external rerankers (revision) | `ext_rerank.py` (BERT / T5 / small LLM) | see results/ext_*.json |
-| reader end-to-end (revision) | `rog_reader_eval.py` | see results/rog_reader_*.json |
+| external rerankers (revision) | `ext_rerank.py` (BERT / T5 / small LLM) | 43.02→55.26 (RWKV), 44.62→56.55 (BERT), —→57.22 (T5), 9.47/7.44 (Qwen zero-shot) |
+| reader end-to-end (revision) | `rog_reader_eval.py` (RoG-7B reader, same top-5 paths) | 73.77→75.55 end-to-end (p=4.2e-4); ranking layer 61.55→66.40 |
 | all pairwise tests | `_stats_pair.py --a dump_A.json --b dump_B.json` | exact McNemar + 10k bootstrap CI |
+
+### Revision scripts (added after the first submission)
+
+Two external checks were added in revision and both are self-contained:
+
+```bash
+# Same-pool cross-encoder control.  Train on the stored path groups, evaluate on the test pool.
+python ext_rerank.py train --model bert-base-uncased --groups path_groups_webqsp_train.jsonl --out bert_plain.pt          # no path
+python ext_rerank.py train --model bert-base-uncased --groups path_groups_webqsp_train.jsonl --path --out bert_path.pt
+python ext_rerank.py eval  --model bert-base-uncased --ckpt bert_path.pt --mined mined_webqsp_test_vghn.jsonl --path --out ext_bert_path_test.json   # 56.55
+python ext_rerank.py eval  --model bert-base-uncased --ckpt bert_path.pt --mined mined_webqsp_test_vghn.jsonl --out ext_bert_plain_test.json         # 44.62
+python ext_rerank.py train --model t5-base --groups path_groups_webqsp_train.jsonl --path --epochs 2 --accum 2 --max-len 128 --out t5_path.pt   # T5 encoder only, 110M; 57.22
+python ext_rerank.py listwise --model Qwen/Qwen2.5-0.5B-Instruct --mined mined_webqsp_test_vghn.jsonl --out ext_qwen_plain_test.json   # 9.47 zero-shot
+python _stats_pair_preds.py --a ext_bert_path_test.json --b ours_pool200.jsonl   # +1.29, p=0.19
+```
+
+`--path` switches the prompt from `Question/Candidate` to `Question/Relation path/Candidate`; nothing
+else changes, so the difference between the two runs is the path. `--accum` is only needed when the
+model does not fit the batch size used for BERT.
+
+```bash
+# End-to-end reader check.  RoG-7B emits candidates; the two rankings pick the top-5 paths;
+# the *same* RoG reader answers from those paths, so only the ranking differs.
+python rog_reader_eval.py --data webqsp --n-beam 3 --topk 5 \
+    --verifier-ft verifier_ft_webqsp_rwkv7_listwise_path_s42.pt --out rog_reader_full.jsonl
+```
+
+The RoG checkpoint is 13.5 GB (6.74B parameters) and needs ~14 GB of VRAM; on Windows the default
+safetensors shard exceeds the page-file commit limit, so `split_safetensors.py` rewrites each shard
+into ≤3.3 GB pieces and patches `model.safetensors.index.json`.
 
 ---
 

@@ -27,7 +27,7 @@
 
 \begin{abstract}
 Knowledge-graph question answering (KGQA) at the frontier is built on 7B-scale language models that generate relation paths over a question subgraph. These paths are expensive to produce, yet their value for \emph{ranking} the resulting candidates has never been isolated. We show that most of the ranking benefit can be obtained by simply \emph{showing the path} to a very small verifier. A 0.19B RWKV-7 cross-encoder, conditioned on \texttt{(question, relation path, candidate)}, is trained listwise in about seven minutes on a single GPU and used as a drop-in reranker.
-Under a controlled protocol with identical training data, identical recipe and identical test pool, path conditioning lifts top-1 accuracy from 46.8 to 54.9 on WebQSP ($+8.1$ over three seeds; the same-seed paired test gives $+6.6$, $p=2.1\times10^{-10}$) and from 53.8 to 89.0 on MetaQA ($+35.2$; the paired same-seed test, the conservative estimate, gives $+32.6$, $p=6.2\times10^{-142}$). The same verifier, applied \emph{without} retraining to the candidate sets of a 7B LLM retriever (RoG), raises its top-1 from 60.9 to 66.1 ($+5.2$, $p=8.5\times10^{-7}$); when the retriever doubles its candidate pool, its own count-based ranking collapses from 60.9 to 47.7 while ours holds at 66.7 ($+18.9$).
+Under a controlled protocol with identical training data, identical recipe and identical test pool, path conditioning lifts top-1 accuracy from 46.8 to 54.9 on WebQSP ($+8.1$ over three seeds; the same-seed paired test gives $+6.6$, $p=2.1\times10^{-10}$) and from 56.2 to 88.8 on MetaQA ($+32.7$ over two full-test seeds; the paired test on the 2{,}000-question subset, where both twins were originally evaluated, gives $+32.6$, $p=6.2\times10^{-142}$). The same verifier, applied \emph{without} retraining to the candidate sets of a 7B LLM retriever (RoG), raises its top-1 from 60.9 to 66.1 ($+5.2$, $p=8.5\times10^{-7}$) and, with RoG's own reader held fixed, lifts end-to-end accuracy from 73.8 to 75.6 ($p=4.2\times10^{-4}$); when the retriever doubles its candidate pool, its own count-based ranking collapses from 60.9 to 47.7 while ours holds at 66.7 ($+18.9$).
 Insertion costs $+26$\,ms and $+2.2$\,GB per query because a cross-encoder scores all candidates of a question in one batched forward pass, something an autoregressive generator cannot do. We also delimit when the signal works: it degrades with path length ($+18.2$ on 1-hop vs.\ $+3.5$ on 2-hop WebQSP questions) and vanishes on CWQ ($-1.1$), where long, frequently truncated paths carry little evidence. Code, checkpoints, per-question result files and all negative results are released in an anonymized repository.
 \end{abstract}
 
@@ -51,15 +51,16 @@ We instantiate the idea as a 0.19B RWKV-7~\cite{peng2023rwkv,peng2025rwkv7} cros
 
 \paragraph{What we find.}
 \begin{enumerate}
-\item \textbf{Path conditioning is the dominant ranking signal.} Holding the training data, the recipe, the candidate pool and the scoring rule fixed (a ``twin'' control we introduce in \S\ref{sec:twin}), adding the path to the prompt lifts H@1 by $+8.1$ points on WebQSP and $+35.2$ on MetaQA.
-\item \textbf{The verifier is portable across retrievers.} Trained on our walker's candidates, it reranks RoG-7B's candidates with no retraining: $60.9\to66.1$ ($+5.2$, $p=8.5\times10^{-7}$). When RoG emits twice as many candidates its own ranking collapses to 47.7, while ours stays at 66.7 ($+18.9$): extra recall is only realised by a competent reranker.
+\item \textbf{Path conditioning is the dominant ranking signal.} Holding the training data, the recipe, the candidate pool and the scoring rule fixed (a ``twin'' control we introduce in \S\ref{sec:twin}), adding the path to the prompt lifts H@1 by $+8.1$ points on WebQSP and $+32.7$ on the full MetaQA test set.
+\item \textbf{The verifier is portable across retrievers.} Trained on our walker's candidates, it reranks RoG-7B's candidates with no retraining: $60.9\to66.1$ ($+5.2$, $p=8.5\times10^{-7}$). With RoG's own reader held fixed, the same reranking raises end-to-end accuracy from 73.8 to 75.6 ($p=4.2\times10^{-4}$). When RoG emits twice as many candidates its own ranking collapses to 47.7, while ours stays at 66.7 ($+18.9$): extra recall is only realised by a competent reranker.
 \item \textbf{Insertion is cheap.} A cross-encoder performs one forward pass per candidate and no autoregressive decoding, so all candidates of a question are scored in a single batch: $+26$\,ms and $+2.2$\,GB on top of the host retriever. Scoring candidates one at a time would cost $+428$\,ms, which is what an LLM-based reranker is forced to do.
 \item \textbf{The benefit has a quantitative boundary.} It shrinks with path length (1-hop: $+18.2$; 2-hop: $+3.5$ on WebQSP) and disappears on CWQ, where only 1.07\% of candidates are positive. We turn this into an operational rule over two measurable quantities---positive density and path length---and show that density alone does not explain the failure (\S\ref{sec:boundary}).
 \item \textbf{The same verifier can buy back retrieval budget.} Guiding the beam with verifier scores leaves the standard beam untouched but lets a 20-wide beam match a 200-wide beam (56.12 vs.\ 56.18) at a tenth of the search.
+\item \textbf{The gain is the path, not the backbone.} On the same pool, a BERT-base cross-encoder trained with the same objective and input gains $+11.9$ from the path, the same order of magnitude as our RWKV verifier ($+12.2$); all three trained cross-encoders land within two points (55.3/56.6/57.2), and only the T5 gap is nominally significant before correction. A 0.5B LLM used zero-shot as a listwise reranker is near chance (7--9\%), so the signal must be learned.
 \end{enumerate}
 
 \paragraph{What this is not.}
-It is not a new architecture: the deployed system is a shared recurrent backbone, a path-conditioned prompt and a linear head. It is not state of the art: NSM (110M, 68.7\% on WebQSP as reported by its authors~\cite{he2021nsm}) dominates us on the parameter--accuracy plane. We report this explicitly, together with every negative result we obtained (\S\ref{sec:neg}).
+It is not a new architecture: the deployed system is a shared recurrent backbone, a path-conditioned prompt and a linear head. It is not state of the art: NSM (110M, 68.7\% on WebQSP as reported by its authors~\cite{he2021nsm}) dominates us on the parameter--accuracy plane. It is not the strongest reranker either: a BERT-base cross-encoder with the same path input ties or slightly beats ours at half the parameters (\S\ref{sec:external}). Our claim is about what the path is worth and how cheaply it can be plugged into another retriever, not about owning the best scorer. We report this explicitly, together with every negative result we obtained (\S\ref{sec:neg}).
 
 %% ---------------------------------------------------------------- 2
 \section{Related Work}
@@ -123,7 +124,7 @@ H@1 is primary. Operationally, each question has a gold set $G$ of answer entiti
 Paired comparisons use the exact McNemar test~\cite{mcnemar1947} on per-question binary outcomes of two systems evaluated on the same questions, plus 10{,}000-sample bootstrap 95\% confidence intervals~\cite{efron1979} on the accuracy difference. All reported $p$ values are uncorrected. The three headline comparisons (twin WebQSP, twin MetaQA, RoG portability) sit at $p\le 8.5\times10^{-7}$, far below a conservative Bonferroni threshold of $3\times10^{-3}$ ($\alpha=0.05$ over the $\sim$15 paired tests in this paper); the set-wise reranking comparison is weaker ($p=0.02$) and is treated as supportive rather than as a headline claim.
 
 \paragraph{Systems compared.}
-(i) walker score; (ii) plain verifier (no path); (iii) fused walker+verifier score; (iv) path-conditioned verifier; (v) the same verifier after backbone fine-tuning; (vi) set-wise reranking over frozen hidden states as a reference point; (vii) RoG-7B as a host retriever for portability; (viii) published numbers for NSM, KGT5, RoG.
+(i) walker score; (ii) plain verifier (no path); (iii) fused walker+verifier score; (iv) path-conditioned verifier; (v) the same verifier after backbone fine-tuning; (vi) set-wise reranking over frozen hidden states as a reference point; (vii) RoG-7B as a host retriever for portability; (viii) published numbers for NSM, KGT5, RoG; (ix) external rerankers trained on the \emph{same} groups and evaluated on the \emph{same} pool---a BERT-base cross-encoder (with and without the path), a T5-base encoder cross-encoder, and a 0.5B instruction-tuned LLM used as a zero-shot listwise reranker; (x) a reader-level end-to-end comparison in which the top-5 paths under two orderings are fed to the RoG-7B reader.
 
 \paragraph{Hardware.}
 All latency and memory numbers were measured on one RTX 4090 (24\,GB). Training runs were spread over that machine, an RTX 5090 and (for the revision experiments) an RTX 3090; re-running stored checkpoints on another GPU reproduces the reported accuracies within 0.5 points (Appendix~\ref{app:hw}), and every comparison in a table is computed on a single GPU and software stack. The FLA RWKV-7 kernels require CUDA and bf16.
@@ -154,7 +155,7 @@ Plain verifier + fused score (published baseline) & 44.19 \\
 
 Table~\ref{tab:main} shows the cumulative ablation on the full test set. The deployed system reaches H@5 = 72.0\% (mean over five seeds). Five seeds give $58.46\pm0.35$ on the 1,615 questions with a non-empty pool, i.e.\ 58.03 on all 1,627.
 
-On MetaQA the plain verifier reaches 65.86\% and the path-conditioned verifier 87.97\% over all 14,274 test questions. On the 2,000-question subset it gives 88.20\%, and four seeds give $0.8898\pm0.0111$. Set-hit is 99.61\%, so MetaQA measures ranking almost purely.
+On MetaQA the path-conditioned verifier reaches 87.97\% with the original training set and $88.82\pm0.62$ with the twin recipe over all 14,274 test questions; the plain twin reaches $56.16\pm1.83$, i.e.\ $+32.7$ under identical data (\S\ref{sec:twin}). Set-hit is 99.61\%, so MetaQA measures ranking almost purely.
 
 On CWQ the path verifier \emph{loses} 1.08 points (26.31 $\rightarrow$ 25.23). \S\ref{sec:boundary} explains why.
 
@@ -172,7 +173,7 @@ Published comparisons of ``path vs.\ no-path'' verifiers usually change two thin
 
 \begin{table}[t]
 \centering\small
-\caption{Twin-controlled path conditioning (identical data, recipe, and test pool). Means $\pm$ std over seeds.}
+\caption{Twin-controlled path conditioning (identical data, recipe, and test pool). Means $\pm$ std over seeds. MetaQA is the full 14{,}274-question test set; the 2{,}000-question subset used for the paired test gives $53.75$ vs.\ $88.98$ ($+35.2$).}
 \label{tab:twin}
 \begin{tabular}{llcc}
 \toprule
@@ -181,13 +182,13 @@ Dataset & Verifier & Seeds & H@1 \\
 \multirow{2}{*}{WebQSP} & plain twin & 3 & $46.75\pm1.38$ \\
  & \textbf{path} & 3 & $\mathbf{54.89\pm0.12}$ \\
 \midrule
-\multirow{2}{*}{MetaQA (2k)} & plain twin & 2 & $53.75\pm2.60$ \\
- & \textbf{path} & 4 & $\mathbf{88.98\pm1.11}$ \\
+\multirow{2}{*}{MetaQA (full)} & plain twin & 2 & $56.16\pm1.83$ \\
+ & \textbf{path} & 2 & $\mathbf{88.82\pm0.62}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:twin} reports the result. On WebQSP the paired per-question test (same seed, $n=1{,}627$) gives $+6.58$ points, $b/c=89/196$, $p=2.1\times10^{-10}$, bootstrap CI $[+4.61,+8.60]$; averaging over three seeds gives $+8.14$. On MetaQA the same test gives $+32.60$ points for the seed-42 pair, $b/c=61/713$, $p=6.2\times10^{-142}$, CI $[+30.3,+34.9]$; comparing seed means ($53.75$ vs.\ $88.98$, two plain and four path seeds) gives $+35.2$.
+Table~\ref{tab:twin} reports the result. On WebQSP the paired per-question test (same seed, $n=1{,}627$) gives $+6.58$ points, $b/c=89/196$, $p=2.1\times10^{-10}$, bootstrap CI $[+4.61,+8.60]$; averaging over three seeds gives $+8.14$. On MetaQA the headline is the full test set: $56.16\pm1.83$ (plain, 2 seeds) vs.\ $88.82\pm0.62$ (path, 2 seeds), $+32.66$. The paired per-question test was run on the 2{,}000-question subset on which both twins were first evaluated: $+32.60$, $b/c=61/713$, $p=6.2\times10^{-142}$, CI $[+30.3,+34.9]$. The subset is harder for the plain verifier ($53.75$ vs.\ $56.16$ on the full set) but the path verifier is stable ($88.98$ vs.\ $88.82$), which is why the subset effect ($+35.2$) is slightly larger than the full-set effect ($+32.7$).
 
 Two remarks. First, the twin-controlled effect is smaller than the number obtained against the historical baseline ($+13.9$ on WebQSP), because that baseline was trained on a different, weaker candidate pool. We report the controlled number as our headline and keep the historical comparison only for continuity. Second, path conditioning also \emph{reduces the across-seed spread} by roughly an order of magnitude on WebQSP ($\pm0.12$ vs.\ $\pm1.38$, three seeds each); with three seeds we report this as a consistent pattern rather than a precisely estimated variance ratio.
 
@@ -216,6 +217,30 @@ Fused (path) & 56.59 & 70.71 & 73.87 \\
 
 Path conditioning is the largest single effect we observe (Table~\ref{tab:samepool}). Set-wise reranking over the verifier's frozen states adds a further $+1.0$ over the fused path score; removing cross-candidate attention costs only 0.11 points, so the gain comes from reusing the verifier's hidden state and within-question normalisation rather than from candidate interaction.
 
+\subsection{Is this the best cheap reranker? External baselines on the same pool}
+\label{sec:external}
+
+A controlled path effect does not by itself show that our model is the best cheap reranker, so we train external rerankers on the \emph{same} groups with the \emph{same} listwise objective, the same candidate budget (64) and length (128), and evaluate them on the \emph{same} pool ($n=1{,}627$); only the backbone changes. Qwen is used zero-shot (no training) as a listwise reranker over the first 100 candidates, because its context cannot hold 200 paths; our verifier is re-scored on that same top-100 subset for the comparison.
+
+\begin{table}[t]
+\centering\footnotesize
+\caption{External rerankers on one candidate pool (WebQSP test, $n=1{,}627$). Three trained cross-encoders land within two points; the path effect is $\approx+12$ in all of them.}
+\label{tab:external}
+\begin{tabular}{lccc}
+\toprule
+Reranker & Params & no path & + path \\
+\midrule
+RWKV-7 (ours, shared with walker) & 191M & 43.02 & 55.26 \\
+BERT-base cross-encoder & 110M & 44.62 & 56.55 \\
+T5-base encoder cross-encoder & 110M & -- & 57.22 \\
+Qwen2.5-0.5B, zero-shot listwise (top-100) & 494M & 9.47 & 7.44 \\
+\quad ours, same top-100 pool & 191M & -- & 53.29 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three findings. (i) \emph{The path effect belongs to the input, not to our backbone}: the same $\approx+12$ appears for BERT (+11.92, $p=2.2\times10^{-23}$, CI $[+9.6,+14.3]$) and for RWKV (+12.24). (ii) \emph{Our reranker is not uniquely good}: BERT-base is 1.29 points above ours but the paired test does not separate them ($p=0.19$, CI $[-0.6,+3.1]$); T5-base is 1.97 above (nominal $p=0.03$ uncorrected, CI $[+0.1,+3.7]$), which would not survive a multiplicity correction. We therefore report ``three trained cross-encoders within two points'', not a win for our backbone. (iii) \emph{Zero-shot listwise prompting is not a substitute}: a 0.5B instruction-tuned model reading the same candidates with their paths answers correctly in 7--9\% of questions, i.e.\ near the 1/100 chance level, so the gain requires a trained scorer, not merely an LLM. The deployment argument for our model is therefore not accuracy but accounting: it shares the walker's 191M weights, whereas a BERT or T5 reranker adds a second model to the system.
+
 \subsection{Portability across retrievers}
 \label{sec:portable-results}
 
@@ -232,7 +257,7 @@ RoG beam & Cand./q & RoG-native & ours (frozen) & ours (fine-tuned) \\
 \bottomrule
 \end{tabular}
 \par\vspace{3pt}
-\footnotesize $\Delta$ vs.\ RoG-native: $+4.42$ (frozen, beam 3), $+5.16$ (fine-tuned, beam 3, $p=8.5\times10^{-7}$), $+18.92$ (fine-tuned, beam 10). The reader is not involved in any row.
+\footnotesize $\Delta$ vs.\ RoG-native: $+4.42$ (frozen, beam 3), $+5.16$ (fine-tuned, beam 3, $p=8.5\times10^{-7}$), $+18.92$ (fine-tuned, beam 10). Rows are ranking H@1 with the reader removed; the end-to-end check through RoG's own reader is in the text.
 \end{table}
 
 The candidate set is produced entirely by RoG; our verifier is trained only on our walker's candidates (``cross-retriever'' transfer). The beam-3 comparison is significant ($p=8.5\times10^{-7}$). The beam-10 row is the informative one: doubling the pool destroys RoG's count-based ranking ($-13.2$) while our verifier is essentially unchanged ($+0.6$). The $+18.92$ therefore combines two effects---our reranker is stable, and RoG's own ordering degrades---and the honest reading is that extra recall is only realised by a competent reranker, which is exactly the role we propose.
@@ -244,7 +269,7 @@ The candidate set is produced entirely by RoG; our verifier is trained only on o
 \label{fig:beam}
 \end{figure}
 
-Scope note: this compares retrieval and reranking only. RoG's own pipeline, which also contains a 7B reader, reports 81.5\% H@1 end-to-end on WebQSP~\cite{luo2024rog}; we do not substitute a reader here and therefore make no end-to-end claim in this table.
+Scope note: this table compares retrieval and reranking only. RoG's own pipeline, which also contains a 7B reader, reports 81.5\% H@1 end-to-end on WebQSP~\cite{luo2024rog}. We run that check separately rather than inside the table. Feeding the top-5 paths of both rankings to RoG's \emph{own} reader, unchanged, raises end-to-end accuracy from 73.77 to 75.55 ($+1.78$; exact McNemar $p=4.2\times10^{-4}$, discordant pairs 47/18, $n=1{,}628$), while the ranking-level H@1 on the same pool moves from 61.55 to 66.40, which reproduces the frozen-verifier row of Table~\ref{tab:pluggable}. The absolute end-to-end level is below the 81.5\% reported for RoG because our replay of its beam-3 rules leaves 15.4\% of questions with an empty pool; the comparison is internal to this pool, with the same reader, the same candidates and only the ranking changed.
 
 \subsection{Cost and its structure}
 \label{sec:cost}
@@ -284,7 +309,7 @@ Finally, a verifier-guided beam---pruning each hop by verifier score instead of 
 \toprule
 Dataset & Positive rate & Path conditioning \\
 \midrule
-MetaQA & very high (pool oracle 99.8\%) & $\mathbf{+32.6}$ (twin) \\
+MetaQA & very high (pool oracle 99.8\%) & $\mathbf{+32.7}$ (twin) \\
 WebQSP & 2.63\% & $\mathbf{+6.6}$ (twin) \\
 CWQ & 1.07\% & $-1.1$ \\
 \bottomrule
@@ -345,6 +370,7 @@ A WebQSP-trained verifier scores 29.2\% on MetaQA and 24.1\% on CWQ, i.e.\ it do
 \item \textbf{MetaQA is easy}: pool oracle 99.8\%, so it measures ranking, not open-domain recall.
 \item \textbf{Insertion is not free}: $+26$\,ms batched, $+428$\,ms if candidates are scored serially; $+2.2$\,GB.
 \item \textbf{Cross-KG zero-shot fails}; per-dataset re-fitting is required.
+\item \textbf{Portability is shown on one heterogeneous host.} We replace the ranking function of RoG-7B, a path-generating LLM retriever, and nothing else. A second host family (e.g.\ a GNN or subgraph retriever) is not tested here; the claim we support is ``any retriever that emits \texttt{(question, path, candidate)} triples'', not ``any retriever'' without qualification.
 \item \textbf{Sharing one backbone with the walker} saves 191M parameters; the joint fine-tuning stage that accompanies it is a confound, so we do not claim an accuracy benefit from sharing per se.
 \item \textbf{No distillation from an LLM is used}; a 7B teacher could plausibly add points, but it would undercut the paper's premise.
 \end{enumerate}
@@ -371,14 +397,14 @@ Omitted for double-blind review.
 \label{app:hw}
 Three stored checkpoints were re-evaluated on a second GPU (RTX 5090, sm\_120). Path verifier: 0.5618 $\rightarrow$ 0.5630; final system seed 42: 0.5833 $\rightarrow$ 0.5827; MetaQA path: 0.8820 $\rightarrow$ 0.8855. Repeat runs on the same GPU are bit-identical, so the residual spread ($\le0.4$ points) is a cross-architecture kernel effect.
 
-The revision experiments (external rerankers, MetaQA full-set twins, reader study) were run on an RTX 3090 with a different software stack (torch 2.5.1/CUDA 12.1 vs.\ 2.8.0/CUDA 12.8, same \texttt{fla} 0.2.1 and transformers 4.49.0). As a harness check we re-ran the published plain baseline there: 44.19 $\rightarrow$ 44.38 (+0.19 points), with the same in-pool oracle (0.7548 vs.\ 0.7554). Every comparison in a table is computed within one GPU and one software stack; absolute numbers across stacks differ by less than half a point. Latency numbers remain those of the RTX 4090 machine.
+The revision experiments (external rerankers, MetaQA full-set twins, reader study) were run on an RTX 3090 with a different software stack (torch 2.5.1/CUDA 12.1 vs.\ 2.8.0/CUDA 12.8, same \texttt{fla} 0.2.1 and transformers 4.49.0). Two checks separate hardware from retraining. First, the published plain baseline reproduces at 44.38 vs.\ 44.19 (+0.19) with the same in-pool oracle (0.7554 vs.\ 0.7548), so hardware is not the source of drift. Second, rebuilding the whole chain there (relation head and path verifier retrained, same seeds and recipe) gives 56.42 vs.\ 54.89 (+1.5): re-training moves absolute accuracy more than hardware does. Every comparison in a table is therefore computed within one GPU and one software stack, and no cross-stack difference is used as evidence. Latency numbers remain those of the RTX 4090 machine.
 
 \section{Long-context state reuse (negative)}
 \label{app:longctx}
-With a 0.19B RWKV-7 the recurrent state can be carried across dialogue turns. In a 30-question pilot ($H\in\{0,16,32\}$ turns), state-based reuse matched concatenation in accuracy exactly (0.500/0.500 at $H=16$; 0.467/0.467 at $H=32$), confirming the implementation, but was slower in wall-clock time at batch size 1 (952 vs.\ 610 ms/query at $H=16$) because per-candidate kernel launch dominates, and history \emph{reduced} accuracy (53.3\%$\to$46.7\%) since the verifier was never trained with history. We therefore treat long-conversation reuse as future work requiring multi-turn training data and batched state expansion.
+With a 0.19B RWKV-7 the recurrent state can be carried across dialogue turns. In a 30-question pilot ($H\in\{0,16,32\}$ turns), state-based reuse matched concatenation in accuracy exactly (0.500/0.500 at $H=16$; 0.467/0.467 at $H=32$), confirming the implementation, but was slower at batch size 1 (952 vs.\ 610 ms/query at $H=16$) because per-candidate kernel launch dominates, and history \emph{reduced} accuracy (53.3\%$\to$46.7\%) since the verifier was never trained with history. Reuse therefore needs multi-turn training data and batched state expansion.
 
 \section{Reproducibility}
 \label{app:repro}
-All datasets are public. The pipeline is: mine candidates with the relation head $\rightarrow$ build path groups $\rightarrow$ train the listwise verifier (2 epochs) $\rightarrow$ evaluate end-to-end once. A full run on WebQSP takes about 40 minutes on one RTX 4090 (20 min head, 7 min verifier, 13 min evaluation). Code, checkpoints, per-experiment logs, the scripts that produce every number and figure, and the paired-test utilities used for every significance claim are released in an anonymized repository with a step-by-step README that starts from a bare machine; the repository also contains the negative results (CWQ path conditioning, cross-KG zero-shot, hard-negative mining, top-$15\to25$ relations, long-context reuse) so that they can be re-run rather than taken on trust. The pre-registered pipeline parameters of \S\ref{sec:protocol} are the defaults of the released evaluation script, so any deviation from the protocol is visible in the command line recorded next to each result file.
+All datasets are public. The pipeline is: mine candidates $\rightarrow$ build path groups $\rightarrow$ train the listwise verifier (2 epochs) $\rightarrow$ evaluate end-to-end once; a full WebQSP run takes about 40 minutes on one RTX 4090 (20 head, 7 verifier, 13 evaluation). Code, checkpoints, logs, the scripts that produce every number and figure, and the paired-test utilities are released in an anonymized repository (URL in the artifact field), together with the negative results so that they can be re-run rather than taken on trust. The pre-registered parameters of \S\ref{sec:protocol} are the defaults of the released evaluation script, so any deviation is visible in the command recorded next to each result file.
 
 \end{document}
