@@ -2,7 +2,7 @@
 |---|---|---|
 | LICENSE | 1078 | 5d27d4675a220faa549cdd5ea6ad3a220af17129af69100afc9e39a1f7be140d |
 | PROTOCOL.md | 2954 | b822855b6a201d8be5779c041dbe4aacf51455059cf012033652d4853cf38660 |
-| README.md | 12920 | 179060945aac99261171ea2f23a9c8984b10bd7c4ba586ecbdf1c8b5382894d9 |
+| README.md | 14401 | 87cf2d4fa554cf093ad4614b65d971c48f45ba08f1b8a3943ef1b2219ddcfbf7 |
 | requirements.txt | 126 | 7c663767f33ce4d14766c3f36ee68cfeb6ccb76aa51b1058710485f5f1889645 |
 | code/_add_entity_chain.py | 1983 | c2ed3dbe0a569182cbeb43e49b378c9c987de3750d9b60bd9b094881077fae04 |
 | code/_add_entity_chain2.py | 2122 | f97d5bc07aec79fc6f213a06e3c2c22c6e2ccb9df8e702d491c355ee0c413aaa |
@@ -14,6 +14,7 @@
 | code/_ckptmeta.py | 393 | 1c3b12e57f2feafd731898a5bcca80a6b38276d60028a4189bd1ce0482ad3543 |
 | code/_cmp_final.py | 1652 | 474687d68f5a0a004a25ec40385a89f5d37db2d7dfeb7b33e620db88563c0ce7 |
 | code/_cmp_final2.py | 1965 | a9994b789ad386d2d8d4b3d86116111c27d4a93df84b528fb139b135f1f0b314 |
+| code/_cwq_make_groups.py | 2597 | ec02c9dd85369c755abf6914c54dbdc692c18d421d62e64dcfd64044e9145a13 |
 | code/_dl_chunk.ps1 | 2776 | 0c4df68f7237f872b3806477424cdbd961c4f86ad1ce0c37142557693733cc34 |
 | code/_dl_curl.ps1 | 2493 | 6b84faefb9d41d2401fb92378b16e401f24fac8128c90d8a065c5250ba5aa2fa |
 | code/_dl_ext.py | 763 | 0446004e77507c036a10439479fe3bf9dd1629e407be71a9cc64905b37894d33 |
@@ -62,7 +63,7 @@
 | code/efficiency_bench.py | 7482 | 5aa32fba95ad2e86471f9b550bdc7ae1ef15ab3bf0ad98ae924706c668d380f9 |
 | code/encode_jsonl.py | 1708 | 43eba2c4f78da9d55e84b40a6fda8df8ffb7f40af01a47bb98f0ef3eceade673 |
 | code/eval_backbone_verifier.py | 2764 | ae34e6d9739591287a0c4a6d48395842533ef73f76304cc4812adc26288ab2f1 |
-| code/eval_e2e.py | 28427 | c6910e0e22298848bbbbd77f0f8167a562cf3215656daa155425da953f199631 |
+| code/eval_e2e.py | 28792 | 9f3e657edb966a3d1b5e347c16156e769ef93a6574a0df09f7a96fbb03b57b1b |
 | code/eval_joint_ckpt.py | 3002 | 9047ebf3cf7f4400a43a94928466fab79c83d0602b426bff707fb2fc5f40f35f |
 | code/eval_pace.py | 7146 | 10ca07decd18554d5e17f5e2380a27f0053bcadc51fdf9f88455512361b6e6c5 |
 | code/eval_path.py | 10084 | 56f9fb55936787538ef793a5fbdbb7ec4a177ae8bbf5547123ea6cd71c6a410e |
@@ -80,6 +81,7 @@
 | code/m0_gnnrag_host.py | 5620 | 6572b4daa75ec61d5259c7eecb12524892283b2eba77e29d7222b8a683b3366d |
 | code/make_heldout_split.py | 3184 | 7a7408c645c4f51ff7f844ed0c2087a5a61484478dd961ef7f11aa6fc19b6670 |
 | code/mine_train_candidates.py | 4455 | 515e3c5cdeeb1318c1daf0e558a17e2779edca9b47e6109768a752b80787b7c1 |
+| code/p2_rescore.py | 4546 | 01268475790be385cd26e4897f836f92ee5f151ea4519ca30a77763c539f0179 |
 | code/pool_score_ours.py | 2367 | 9bf01dd3475a373731332cc85b8dc984aba7845c90ea1ab11edd14b2055056b3 |
 | code/pool_table.py | 2331 | 2169ebc91162e39db8180aededb3f73b4b93eee73ed933a06ae9ced80bcb68e1 |
 | code/prepare_cond_data.py | 1915 | 86c2dc790453ef5aac210c77f5a5345ce159513fcf9c71bf388c22498674599c |
@@ -98,6 +100,7 @@
 | code/run_m1c.ps1 | 1201 | 5324b96cbeadb99086f87c68b98a7553da677887eab3ae267fdd0e3665314450 |
 | code/run_m2.ps1 | 777 | 9a01eee2dd6646288cb6c6709938bd564029bbdf05afcd227ea67c2eba032969 |
 | code/run_m4.ps1 | 2500 | a4e8e866a868b79b8c0c30bd5c6b85a958387b9372136dc73aecedd99087d891 |
+| code/run_p2_cwq.ps1 | 1558 | ddb66555a458c468db63791bb0c0ad14f7fc96522b2e512c3b329ff5256fd4d0 |
 | code/run_path_local.ps1 | 1258 | cc875f87b7eade89be2af4b26d4d2a1010e76cd0e221fc6673fbd901dd2a7c11 |
 | code/run_vghn.ps1 | 3176 | 2abeb0a142db9dec0a41c864a4e9df2f76fc6b273732439a43f06059f94091ec |
 | code/significance.py | 1499 | 336e0b3f91102e031c8b1202b8ef9f892f8d64e150cd1d5f4a4d7fa0ad327c5f |
@@ -121,10 +124,10 @@
 | docs/GooseRAG_结果与定位.md | 78328 | b683aadd30f45bee97793f08a22a3331887c8a4f1e15df61da9bd0acd7a0c0e9 |
 | docs/GooseRAG_论文骨架.md | 9643 | 21982ca2ed3d189eaecc60a62a42f1a34a4313684253cbafcd99db4bf096e462 |
 | docs/实验台账.md | 39071 | cffafea5b36aa1ea29515f8d6d8696c73503ed4eeed9a28b8bc46148864ff0a2 |
-| paper/main.pdf | 693285 | 12841065f3e57b875cefca66a3558ec24e11e69336f9ff73c6ade9903729a7e3 |
-| paper/main.tex | 44436 | 47a0bf9c2af812be125f8f87b1b4a55050f88eb873c5a617739ed41b719ab8ef |
-| paper/main_resource.pdf | 588155 | 5d252dd41c83059ce583e576ed151bdf431e35a3b0dec62f0a13273c6430353e |
-| paper/main_resource.tex | 37501 | 28bb9c03b92bc448c4f21d7ec7870c2bb1f341d904f4040da16bb489c6180caf |
+| paper/main.pdf | 676983 | 89331ebbda857f326c8007ebeb753e48d44e2203110e57e00554d8ae2af576f4 |
+| paper/main.tex | 45509 | 2dddf4f6e0ff8ce058804443e32bac85b82225dad9381ea2b6b2462a60a5f980 |
+| paper/main_resource.pdf | 587545 | 07ffe08d7906690309c0ed183a218030b63cac5ca97c769409983f6d7101b958 |
+| paper/main_resource.tex | 37395 | 638cfd981ad626d0f76ce67fe1f24b17e8ca99f9d96e2f16694f801668f44367 |
 | paper/refs.bib | 7613 | 7a2637fb427ae7232a02486af3f8e1105e4ed3253b8723da26292143990fab9f |
 | results/_local_plain_full.json | 1045 | e87650ea60acfb62e1c4ab679fd0c7066ed201444ab34e1b9563281d9478edaa |
 | results/_tmp_mem_eval.json | 901 | f9d977f23d52b1f88b9312a71d3cee4943e6719db22d0d6d8f2315716a1d7900 |
@@ -294,6 +297,7 @@
 | results/p19_path_s43.json | 1006 | 92f1bac4a961c158b61771eb62bbcbb341baac046379dfd74e3095101a3a4a0a |
 | results/p19_plain_s43.json | 1008 | 37c13634d3383158f87915fcd12e39fa053f9705f8963f64c0e449cdeafcd9eb |
 | results/p19_stats_twin.json | 354 | be8fb5d4ec06cb011a2f1756914d712d085b201012e4831add6413b7bea82412 |
+| results/p2_cwq_truncation.json | 1823 | df88194f6e580a8217fb4bc5ccb399944224e97c3348fbf8948a49e4dba540ac |
 | results/pace_e2e_test400.jsonl | 289991 | a30b815c9f5d822eabaf0666fac1621c99278f56bca6ac4cf8dd0ad5a9bd265e |
 | results/pace_path400.jsonl | 297386 | 80671ef616179281b49b0a254cec66c1cb68690da03b1ec4b4d812c02769b8a7 |
 | results/pace_pathfull.jsonl | 1171164 | ef3f8f8e5a4a0cb3a81135c9e4264171fb5b6795f0c36868695542a1e09ce022 |

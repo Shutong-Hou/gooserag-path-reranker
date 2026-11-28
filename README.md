@@ -130,6 +130,7 @@ Expected values (see `results/` for the exact files):
 | Table 6 (density) | `_dose_response.py`, `_webqsp_hop.py`, `_metaqa_hop.py` | see §5.6 of the paper |
 | external rerankers (revision) | `ext_rerank.py` (BERT / T5 / trained 0.5B / zero-shot listwise) | 43.02→55.26 (RWKV), 44.62→56.55 (BERT), —→57.22 (T5), —→59.80 (trained Qwen), 9.47/7.44 (zero-shot) |
 | second host (revision) | `m0_gnnrag_host.py`, `m0_eval.py`, `m0_build_refit_groups.py` | host 76.23, ours zero-shot 74.32 (−1.90, p=0.037), re-fit 73.77 |
+| CWQ path content (revision) | `_cwq_make_groups.py`, `p2_rescore.py` + one beam dump | plain 26.42 / first-hop 26.90 / full chain 28.32 (+1.90, p=1.4e-3) / relation domains 28.27 (p=0.96 vs full) |
 | reader end-to-end (revision) | `rog_reader_eval.py` (RoG-7B reader, same top-5 paths) | 73.77→75.55 end-to-end (p=4.2e-4); ranking layer 61.55→66.40 |
 | all pairwise tests | `_stats_pair.py --a dump_A.json --b dump_B.json` | exact McNemar + 10k bootstrap CI |
 
@@ -187,6 +188,21 @@ be removed before aligning with `test.json`. Re-fitting on the host's training s
 (`m0_build_refit_groups.py` + `train_verifier_listwise.py`) and gives 73.77: that split is 75% positive,
 so it carries almost no ranking signal.
 
+```bash
+# CWQ: what the path must contain (twin-controlled, four arms on one pool).
+python _cwq_make_groups.py     # three renderings of the same groups: full chain / first hop / relation domains
+# train each arm (~12 min each) with train_verifier_listwise.py --path, then dump the pool once:
+python eval_e2e.py --dataset cwq --split test --beam 200 --topk-rel 15 --max-hops 3 --ban-generic \
+    --generic-mode all --beta 2.0 --gamma 0.5 --verifier-top 200 \
+    --dump _cwq_test_pool.json --out _cwq_beamonly.json
+python p2_rescore.py           # 26.42 / 26.90 / 28.32 / 28.27 for plain / hop1 / full / domains
+```
+
+The `plain` arm reproduces the released listwise checkpoint's validation accuracy exactly
+(0.603112840466926), which is the check that the four arms share one recipe. Result: the path is worth
++1.90 on CWQ (`p=1.4e-3`), keeping only the first relation recovers half of it, and a coarse
+relation-*domain* summary recovers all of it (`p=0.96` against the full chain).
+
 ---
 
 ## 6. Evaluation definitions (why the numbers are auditable)
@@ -225,6 +241,9 @@ comparison in a table is computed within one GPU and one software stack. Latency
   split lowers it to 73.77. The loss is confined to short pools (−3.66 at ≤5 candidates, +4.30 above
   ten), which is the same condition as the boundary rule: portability holds for recall-oriented
   candidate sets, not for a strong GNN that has already ranked a short list.
+* CWQ, first attempt (superseded): an early comparison gave 26.31 → 25.23 for path vs no-path, but the
+  two checkpoints came from different recipes, so the difference could not be attributed to the path.
+  We ship the twin-controlled version instead (below) and no longer cite the old number.
 
 ---
 

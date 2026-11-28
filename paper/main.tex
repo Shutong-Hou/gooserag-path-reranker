@@ -28,7 +28,7 @@
 \begin{abstract}
 Knowledge-graph question answering (KGQA) at the frontier is built on 7B-scale language models that generate relation paths over a question subgraph. These paths are expensive to produce, yet their value for \emph{ranking} the resulting candidates has never been isolated. We show that most of the ranking benefit can be obtained by simply \emph{showing the path} to a very small verifier. A 0.19B RWKV-7 cross-encoder, conditioned on \texttt{(question, relation path, candidate)}, is trained listwise in about seven minutes on a single GPU and used as a drop-in reranker.
 Under a controlled protocol with identical training data, identical recipe and identical test pool, path conditioning lifts top-1 accuracy from 46.8 to 54.9 on WebQSP ($+8.1$ over three seeds; the same-seed paired test gives $+6.6$, $p=2.1\times10^{-10}$) and from 56.2 to 88.8 on MetaQA ($+32.7$ over two full-test seeds; the paired test on the 2{,}000-question subset, where both twins were originally evaluated, gives $+32.6$, $p=6.2\times10^{-142}$). The same verifier, applied \emph{without} retraining to the candidate sets of a 7B LLM retriever (RoG), raises its top-1 from 60.9 to 66.1 ($+5.2$, $p=8.5\times10^{-7}$) and, with RoG's own reader held fixed, lifts end-to-end accuracy from 73.8 to 75.6 ($p=4.2\times10^{-4}$); when the retriever doubles its candidate pool, its own count-based ranking collapses from 60.9 to 47.7 while ours holds at 66.7 ($+18.9$).
-Insertion costs $+26$\,ms and $+2.2$\,GB per query because a cross-encoder scores all candidates of a question in one batched forward pass, something an autoregressive generator cannot do. We also delimit when the signal works: it degrades with path length ($+18.2$ on 1-hop vs.\ $+3.5$ on 2-hop WebQSP questions) and vanishes on CWQ ($-1.1$), where long, frequently truncated paths carry little evidence; and it transfers to a second, graph-based host only where that host's pool is recall-oriented, not where the host already ranks a short list well ($-1.9$). Code, checkpoints, per-question result files and all negative results are released in an anonymized repository.
+Insertion costs $+26$\,ms and $+2.2$\,GB per query because a cross-encoder scores all candidates of a question in one batched forward pass, something an autoregressive generator cannot do. We also delimit when the signal works: it degrades with path length ($+18.2$ on 1-hop vs.\ $+3.5$ on 2-hop WebQSP questions) and in magnitude across datasets ($+32.7$ MetaQA, $+6.6$ WebQSP, $+1.9$ CWQ), and on a large-vocabulary KG a coarse relation-\emph{type} summary of the path is enough (28.27 vs.\ 28.32 for the full chain); it transfers to a second, graph-based host only where that host's pool is recall-oriented, not where the host already ranks a short list well ($-1.9$). Code, checkpoints, per-question result files and all negative results are released in an anonymized repository.
 \end{abstract}
 
 \ccsdesc[500]{Information systems~Question answering}
@@ -54,7 +54,7 @@ We instantiate the idea as a 0.19B RWKV-7~\cite{peng2023rwkv,peng2025rwkv7} cros
 \item \textbf{Path conditioning is the dominant ranking signal.} Holding the training data, the recipe, the candidate pool and the scoring rule fixed (a ``twin'' control we introduce in \S\ref{sec:twin}), adding the path to the prompt lifts H@1 by $+8.1$ points on WebQSP and $+32.7$ on the full MetaQA test set.
 \item \textbf{The verifier is portable across retrievers, within a measured boundary.} Trained on our walker's candidates, it reranks RoG-7B's candidates with no retraining: $60.9\to66.1$ ($+5.2$, $p=8.5\times10^{-7}$). With RoG's own reader held fixed, the same reranking raises end-to-end accuracy from 73.8 to 75.6 ($p=4.2\times10^{-4}$). When RoG emits twice as many candidates its own ranking collapses to 47.7, while ours stays at 66.7 ($+18.9$): extra recall is only realised by a competent reranker. On a \emph{graph} host with a short, high-precision pool the transfer does not pay ($-1.9$ against GNN-RAG's own in-domain score), which locates the boundary at recall-oriented candidate sets (\S\ref{sec:portable-results}).
 \item \textbf{Insertion is cheap.} A cross-encoder performs one forward pass per candidate and no autoregressive decoding, so all candidates of a question are scored in a single batch: $+26$\,ms and $+2.2$\,GB on top of the host retriever. Scoring candidates one at a time would cost $+428$\,ms, which is what an LLM-based reranker is forced to do.
-\item \textbf{The benefit has a quantitative boundary.} It shrinks with path length (1-hop: $+18.2$; 2-hop: $+3.5$ on WebQSP) and disappears on CWQ, where only 1.07\% of candidates are positive. We turn this into an operational rule over two measurable quantities---positive density and path length---and show that density alone does not explain the failure (\S\ref{sec:boundary}).
+\item \textbf{The benefit has a quantitative boundary, and a prescription.} It shrinks with path length (1-hop: $+18.2$; 2-hop: $+3.5$ on WebQSP) and in magnitude across datasets ($+32.7$ MetaQA, $+6.6$ WebQSP, $+1.9$ CWQ), tracking positive density and relation-vocabulary size. Under a twin control on CWQ, a coarse relation-\emph{type} summary of the path recovers the entire gain of the full chain (28.27 vs.\ 28.32), while the first hop alone recovers half (\S\ref{sec:boundary}).
 \item \textbf{The same verifier can buy back retrieval budget.} Guiding the beam with verifier scores leaves the standard beam untouched but lets a 20-wide beam match a 200-wide beam (56.12 vs.\ 56.18) at a tenth of the search.
 \item \textbf{The gain is the path, not the backbone.} On the same pool, a BERT-base cross-encoder trained with the same objective and input gains $+11.9$ from the path, the same order of magnitude as our RWKV verifier ($+12.2$); all three trained sub-0.2B cross-encoders land within two points (55.3/56.6/57.2), a 0.5B decoder trained the same way reaches 59.8 (+3.3 over the best encoder), and the same 0.5B used zero-shot is near chance (7--9\%). The signal must be learned, and it keeps improving with capacity; we compete on cost, not on the accuracy frontier.
 \end{enumerate}
@@ -157,7 +157,7 @@ Table~\ref{tab:main} shows the cumulative ablation on the full test set. The dep
 
 On MetaQA the path-conditioned verifier reaches 87.97\% with the original training set and $88.82\pm0.62$ with the twin recipe over all 14,274 test questions; the plain twin reaches $56.16\pm1.83$, i.e.\ $+32.7$ under identical data (\S\ref{sec:twin}). Set-hit is 99.61\%, so MetaQA measures ranking almost purely.
 
-On CWQ the path verifier \emph{loses} 1.08 points (26.31 $\rightarrow$ 25.23). \S\ref{sec:boundary} explains why.
+On CWQ the path verifier gains 1.90 points under a twin control (26.42 $\rightarrow$ 28.32, $p=1.4\times10^{-3}$), and a coarse relation-type summary recovers the same gain; \S\ref{sec:boundary} explains both.
 
 \begin{figure}[t]
 \centering
@@ -309,34 +309,32 @@ Finally, a verifier-guided beam---pruning each hop by verifier score instead of 
 
 \begin{table}[t]
 \centering\small
-\caption{Positive density and the effect of path conditioning. The last column is the paired same-seed $\Delta$ (twin) where a twin exists.}
+\caption{Positive density and the effect of path conditioning under a twin control (same groups, recipe, seed and pool).}
 \label{tab:density}
 \begin{tabular}{lcc}
 \toprule
 Dataset & Positive rate & Path conditioning \\
 \midrule
-MetaQA & very high (pool oracle 99.8\%) & $\mathbf{+32.7}$ (twin) \\
-WebQSP & 2.63\% & $\mathbf{+6.6}$ (twin) \\
-CWQ & 1.07\% & $-1.1$ \\
+MetaQA & very high (pool oracle 99.8\%) & $\mathbf{+32.7}$ \\
+WebQSP & 2.63\% & $\mathbf{+6.6}$ \\
+CWQ & 1.07\% & $\mathbf{+1.9}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{A boundary rule.}
-Combining the three datasets, the effect is predicted by two measurable factors: \emph{positive density} (how much ranking headroom exists) and \emph{path discriminativeness} (how much information a length-$L$ chain over the dataset's relation vocabulary carries). The rule we extract is: path conditioning pays when the pool is not saturated \emph{and} the relation chain is short relative to the vocabulary (WebQSP: $2.63\%$ positive, 2 hops, thousands of relations; MetaQA: near-saturated but only 18 relations over 3 hops), and it fails when long paths over a large vocabulary carry little evidence (CWQ: $1.07\%$ positive, 3 hops). This rule, not the raw delta, is the transferable result.
+The effect is positive on all three datasets, but its size tracks two measurable quantities: \emph{positive density} (how much ranking headroom exists) and the \emph{size of the relation vocabulary} (how much a short chain can pin down). MetaQA gains most ($+32.7$) even though its pools are nearly saturated, because 18 relations over 3 hops make a chain almost perfectly identifying; WebQSP gains $+6.6$ with thousands of relations over 2 hops; CWQ gains $+1.9$ with thousands of relations over 3 hops and a positive rate of 1.07\%. The transferable statement is therefore about magnitude and about \emph{what} the path must carry, not about a dataset where the method fails---and the next paragraph turns the second half into an operational prescription.
 
 \paragraph{Path length.}
 Splitting WebQSP by the gold candidate's path length (Figure~\ref{fig:pathlen}, left): 1-hop questions ($n=609$) go from 69.79 to 88.01 ($+18.2$), while 2-hop questions ($n=662$) go from 53.63 to 57.10 ($+3.5$ only); 344 questions are recall misses. MetaQA, whose questions are dominated by 3-hop templates but whose relation vocabulary is tiny, gains at every distance ($+18.5$/$+30.4$/$+24.0$ for 1/2/3 hops, Figure~\ref{fig:pathlen}, right). The gain is therefore concentrated where the relation chain itself is discriminative.
 
 \paragraph{Dose--response.}
-Bucketing questions by the number of gold answers present in the pool (Figure~\ref{fig:dose}) shows that the effect is positive in every bucket on WebQSP and MetaQA, but its size depends on the task. On WebQSP the largest gain occurs in the hardest bucket, a single gold candidate in the pool ($+14.9$, $n=643$). On CWQ the \emph{same} bucket shows $-0.7$ ($n=1{,}959$). Density alone does not explain the CWQ failure; what differs is that CWQ's 3-hop paths are long, frequently truncated, and rarely discriminative, so the path string carries little evidence either way.
+Bucketing questions by the number of gold answers present in the pool shows that the effect is positive in every WebQSP and MetaQA bucket; on WebQSP the largest gain occurs in the hardest bucket, a single gold candidate in the pool ($+14.9$, $n=643$). Density changes the size of the effect but not its sign.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.95\linewidth]{figures/fig8_dose.pdf}
-\caption{Gain from path conditioning as a function of how many gold answers the pool contains. MetaQA gains most where ranking is hardest; CWQ is flat-to-negative at every dose, which is why we describe its failure as a path-informativeness limit rather than a density limit.}
-\label{fig:dose}
-\end{figure}
+\paragraph{What the path has to contain.}
+Our earlier CWQ comparison trained the path verifier and its no-path control with different recipes, so it could not attribute the difference to the path. Rebuilding it as a twin---identical groups (2{,}608 questions, 128{,}941 candidates, 3.47\% positive), identical seed, identical test pool---reverses the sign: the path lifts CWQ from 26.42 to 28.32 ($+1.90$; exact McNemar $p=1.4\times10^{-3}$, $b/c=181/248$). The gain is small compared with WebQSP ($+6.6$) and MetaQA ($+32.7$), consistent with CWQ's low positive density, but it does not vanish.
+
+The same twin then locates \emph{which part} of the path carries the evidence. Keeping only the first relation recovers 0.5 points (26.90, $p=0.43$), i.e.\ half the effect; replacing the chain by its coarse relation \emph{domains}---the first segment of each relation, deduplicated and sorted, 740 distinct strings against 6{,}204 distinct chains---recovers all of it (28.27 vs.\ 28.32, $p=0.96$ for the difference from the full chain, $+1.85$ over no path at $p=5.1\times10^{-4}$). On a KG with thousands of relations, the informative content of a path is which domains it traverses, not the exact sequence; on MetaQA, with 18 relations, the chain itself is the signal. This is the operational form of the rule: \emph{summarise the path by relation type when the vocabulary is large, keep the chain when it is small.}
 
 \begin{figure}[t]
 \centering
@@ -349,7 +347,7 @@ Bucketing questions by the number of gold answers present in the pool (Figure~\r
 Replacing each candidate's path with random relations of the same length drops WebQSP H@1 from 56.18 to 39.52; masking the candidate name while keeping the path drops it to 42.10, below the no-path fused baseline (48.30). Both are out-of-distribution inputs, so we read them as directional evidence: the gain comes from reading the correct path \emph{together with} the entity, not from extra tokens.
 
 \paragraph{Cross-KG transfer.}
-A WebQSP-trained verifier scores 29.2\% on MetaQA and 24.1\% on CWQ, i.e.\ it does not transfer zero-shot across KGs; re-fitting costs about seven minutes per dataset. On MetaQA, re-fitting recovers a large gain (88.8 with the twin recipe); on CWQ it reproduces the in-domain result, which is itself negative (25.23 vs.\ 26.31 without the path), so what re-fitting recovers is the domain's own ceiling, and that ceiling is set by path information rather than by training (\S\ref{sec:boundary}). A data-scale sweep (25\%/50\%/100\% of the training groups) gives 50.46/52.43/54.89, so a quarter of the data still beats the plain verifier by 8.5 points. The method is therefore \emph{portable across retrievers} and \emph{cheap to re-fit across KGs}, not zero-shot.
+A WebQSP-trained verifier scores 29.2\% on MetaQA and 24.1\% on CWQ, i.e.\ it does not transfer zero-shot across KGs; re-fitting costs about seven minutes per dataset and recovers each domain's own ceiling (88.8 on MetaQA with the twin recipe, and $+1.9$ over no path on CWQ, \S\ref{sec:boundary}). A data-scale sweep (25\%/50\%/100\% of the training groups) gives 50.46/52.43/54.89, so a quarter of the data still beats the plain verifier by 8.5 points. The method is therefore \emph{portable across retrievers} and \emph{cheap to re-fit across KGs}, not zero-shot.
 
 \subsection{Ablations and negative results}
 \label{sec:neg}
@@ -372,7 +370,7 @@ A WebQSP-trained verifier scores 29.2\% on MetaQA and 24.1\% on CWQ, i.e.\ it do
 \begin{enumerate}
 \item \textbf{Accuracy is not the selling point.} NSM (110M, 68.7\% WebQSP) dominates us on the parameter--accuracy plane, and KGT5 (60M, 56.1\%) is more parameter-efficient.
 \item \textbf{Not a new architecture.} The deployed system is a shared recurrent backbone, a path-conditioned prompt and a linear head.
-\item \textbf{The boundary is narrow.} CWQ fails outright, and on WebQSP the benefit concentrates on 1-hop questions ($+18.2$) while 2-hop questions gain only 3.5 points.
+\item \textbf{The boundary is narrow.} On WebQSP the benefit concentrates on 1-hop questions ($+18.2$) while 2-hop questions gain only 3.5 points, and on CWQ the twin-controlled gain is 1.9 rather than 6.6; a coarse relation-type summary is needed to obtain it there.
 \item \textbf{MetaQA is easy}: pool oracle 99.8\%, so it measures ranking, not open-domain recall.
 \item \textbf{Insertion is not free}: $+26$\,ms batched, $+428$\,ms if candidates are scored serially; $+2.2$\,GB.
 \item \textbf{Cross-KG zero-shot fails}; per-dataset re-fitting is required.
@@ -388,7 +386,7 @@ A WebQSP-trained verifier scores 29.2\% on MetaQA and 24.1\% on CWQ, i.e.\ it do
 \section{Conclusion}
 \label{sec:conclusion}
 
-The expensive part of LLM-based KGQA is generating paths; the useful part may simply be \emph{showing the path to a ranker}. A 0.19B path-conditioned verifier, trained in minutes, portable to recall-oriented retrievers and re-fittable per KG, improves a 7B retriever's top-1 accuracy by 5.2 points (18.9 when the retriever over-generates) at a cost of 26 ms and 2.2 GB, and can even buy back retrieval budget at narrow beam widths. We hope the measurement of where the signal fails---path length, positive density, and a second host it does not help---is as useful as the gains.
+The expensive part of LLM-based KGQA is generating paths; the useful part may simply be \emph{showing the path to a ranker}. A 0.19B path-conditioned verifier, trained in minutes, portable to recall-oriented retrievers and re-fittable per KG, improves a 7B retriever's top-1 accuracy by 5.2 points (18.9 when the retriever over-generates) at a cost of 26 ms and 2.2 GB, and can even buy back retrieval budget at narrow beam widths. We hope the measurement of how far the signal reaches---path length, positive density, a relation-type summary that suffices on a large-vocabulary KG, and a second host it does not help---is as useful as the gains.
 
 \begin{acks}
 Omitted for double-blind review.

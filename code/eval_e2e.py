@@ -595,7 +595,11 @@ def main():
         if args.dump:
             dumps.append({"id": r["id"], "question": r["question"],
                           "gold": sorted(gold), "pred": ranked[:args.dump_top],
-                          "n_cand": len(ranked), "gold_rank": gold_rank})
+                          "n_cand": len(ranked), "gold_rank": gold_rank,
+                          # beam-level pool with the relation path that reached each entity,
+                          # so a different path rendering can be re-scored without re-running the beam
+                          "cand": [{"e": e, "rels": list(path_of.get(e, ())), "s": float(s)}
+                                   for e, s in ranked[:args.verifier_top]]})
         if (i + 1) % 200 == 0:
             print(f"  {i+1}/{len(rows)} hit1={hit1/max(tot,1):.4f} "
                   f"set_hit={set_hit/max(tot,1):.4f}", flush=True)
