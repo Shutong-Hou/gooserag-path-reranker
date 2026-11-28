@@ -1,0 +1,15 @@
+{
+ "n_paired": 1627,
+ "A_file": "E:\\GooseRAG\\data\\rog_qa\\ext_bert_path_test.json.preds.jsonl",
+ "B_file": "E:\\GooseRAG\\data\\rog_qa\\ext_qwen_path_trained_test.json.preds.jsonl",
+ "A_h1": 0.5654578979717271,
+ "B_h1": 0.5980331899200984,
+ "delta_pt": 3.2575291948371277,
+ "b_Aonly": 74,
+ "c_Bonly": 127,
+ "mcnemar_p": 0.0002267302570517293,
+ "boot_ci_pt": [
+  1.5365703749231714,
+  4.917025199754148
+ ]
+}

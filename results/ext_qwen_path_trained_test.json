@@ -1,0 +1,7 @@
+{
+ "model": "E:\\GooseRAG\\models\\Qwen2.5-0.5B-Instruct",
+ "ckpt": "E:\\GooseRAG\\data\\rog_qa\\ext_qwen_path_trained.pt",
+ "path": true,
+ "n": 1627,
+ "hits1": 0.5980331899200984
+}

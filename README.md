@@ -128,13 +128,14 @@ Expected values (see `results/` for the exact files):
 | Table 4 (RoG host) | `rog_plugplay.py` (n_beam 3 and 10) | 60.93 → 65.36 / 66.09; beam 10: 47.73 → 66.65 |
 | Table 5 (cost) | `_breakdown.py`, `_bench_lat.py`, `_bench_plugcost.py` | 278 ms = 73 + 205; +26 / +428 ms; 2.2 GB |
 | Table 6 (density) | `_dose_response.py`, `_webqsp_hop.py`, `_metaqa_hop.py` | see §5.6 of the paper |
-| external rerankers (revision) | `ext_rerank.py` (BERT / T5 / small LLM) | 43.02→55.26 (RWKV), 44.62→56.55 (BERT), —→57.22 (T5), 9.47/7.44 (Qwen zero-shot) |
+| external rerankers (revision) | `ext_rerank.py` (BERT / T5 / trained 0.5B / zero-shot listwise) | 43.02→55.26 (RWKV), 44.62→56.55 (BERT), —→57.22 (T5), —→59.80 (trained Qwen), 9.47/7.44 (zero-shot) |
+| second host (revision) | `m0_gnnrag_host.py`, `m0_eval.py`, `m0_build_refit_groups.py` | host 76.23, ours zero-shot 74.32 (−1.90, p=0.037), re-fit 73.77 |
 | reader end-to-end (revision) | `rog_reader_eval.py` (RoG-7B reader, same top-5 paths) | 73.77→75.55 end-to-end (p=4.2e-4); ranking layer 61.55→66.40 |
 | all pairwise tests | `_stats_pair.py --a dump_A.json --b dump_B.json` | exact McNemar + 10k bootstrap CI |
 
 ### Revision scripts (added after the first submission)
 
-Two external checks were added in revision and both are self-contained:
+Three external checks were added in revision and all are self-contained:
 
 ```bash
 # Same-pool cross-encoder control.  Train on the stored path groups, evaluate on the test pool.
@@ -161,6 +162,30 @@ python rog_reader_eval.py --data webqsp --n-beam 3 --topk 5 \
 The RoG checkpoint is 13.5 GB (6.74B parameters) and needs ~14 GB of VRAM; on Windows the default
 safetensors shard exceeds the page-file commit limit, so `split_safetensors.py` rewrites each shard
 into ≤3.3 GB pieces and patches `model.safetensors.index.json`.
+
+```bash
+# Trained 0.5B listwise reranker (decoder, last-token pooling).  Fits 24 GB with checkpointing + chunking.
+python ext_rerank.py train --model Qwen/Qwen2.5-0.5B-Instruct --groups path_groups_webqsp_train.jsonl \
+    --path --epochs 2 --lr 1e-5 --max-cands 64 --max-len 160 --accum 4 --grad-ckpt --chunk 16 \
+    --out ext_qwen_path_trained.pt                                                       # ~25 min
+python ext_rerank.py eval --model Qwen/Qwen2.5-0.5B-Instruct --ckpt ext_qwen_path_trained.pt \
+    --mined mined_webqsp_test_vghn.jsonl --path --max-len 160 --out ext_qwen_path_trained_test.json   # 59.80
+python _stats_pair_preds.py ext_bert_path_test.json.preds.jsonl ext_qwen_path_trained_test.json.preds.jsonl  # +3.26, p=2.3e-4
+```
+
+```bash
+# Second host: GNN-RAG's released ReaRev-WebQSP candidates (negative result, shipped on purpose).
+python m0_gnnrag_host.py       # BFS paths + id/name map -> gnnrag_webqsp_test.jsonl
+python m0_eval.py              # host 76.23 vs ours 74.32 (-1.90, p=0.037)
+```
+
+Inputs for the second host are all public: the `MakiAi/GNN-RAG` HF mirror (checkpoint, WebQSP
+subgraphs, id tables) and `cmavro/GNN-RAG` on GitHub (`llm/results/gnn/RoG-webqsp/rearev-sbert/test.info`
+holds the per-question candidates and scores; `llm/entities_names.json` maps Freebase ids to names).
+Question strings in that `test.info` are WordPiece-decoded (`jam ##ai ##can`), so the ` ##` markers must
+be removed before aligning with `test.json`. Re-fitting on the host's training split is also shipped
+(`m0_build_refit_groups.py` + `train_verifier_listwise.py`) and gives 73.77: that split is 75% positive,
+so it carries almost no ranking signal.
 
 ---
 
@@ -195,6 +220,11 @@ comparison in a table is computed within one GPU and one software stack. Latency
 * top-15→25 relations: −0.47 points over three seeds.
 * Beam 400: −0.7; max-children 128→512: no change (refutes a recall-bound hypothesis).
 * Long-context state reuse: slower and less accurate without multi-turn training (Appendix B).
+* Second host (GNN-RAG ReaRev-WebQSP): zero-retrain transfer loses 1.90 points to the host's own
+  in-domain score (74.32 vs 76.23, p=0.037), rank fusion adds nothing, and re-fitting on the host's
+  split lowers it to 73.77. The loss is confined to short pools (−3.66 at ≤5 candidates, +4.30 above
+  ten), which is the same condition as the boundary rule: portability holds for recall-oriented
+  candidate sets, not for a strong GNN that has already ranked a short list.
 
 ---
 

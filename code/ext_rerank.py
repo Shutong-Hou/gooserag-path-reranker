@@ -60,11 +60,20 @@ class CrossEncoder(nn.Module):
             self.enc = AutoModel.from_pretrained(model_name)
         h = self.enc.config.hidden_size
         self.head = nn.Linear(h, 2)
+        # decoder-only backbones must pool the last non-pad token: the first position
+        # of a causal LM attends to itself only.
+        mt = getattr(self.enc.config, "model_type", "")
+        self.decoder = mt in {"qwen2", "llama", "gpt2", "mistral", "gemma", "gemma2", "phi3"}
 
     def forward(self, ids, mask):
         out = self.enc(input_ids=ids, attention_mask=mask)
-        h = out.last_hidden_state[:, 0]  # [CLS] / first token
-        return self.head(h.float())
+        h = out.last_hidden_state
+        if self.decoder:
+            idx = mask.sum(dim=1) - 1
+            pooled = h[torch.arange(h.size(0), device=h.device), idx]
+        else:
+            pooled = h[:, 0]  # [CLS] / first token
+        return self.head(pooled.float())
 
 
 def load_groups(path, max_cands):
@@ -95,6 +104,11 @@ def train(args):
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token if tok.eos_token else tok.pad_token
     model = CrossEncoder(args.model).to(dev)
+    if getattr(args, "grad_ckpt", False) and model.decoder:
+        model.enc.config.use_cache = False
+        model.enc.gradient_checkpointing_enable()
+        model.enc.enable_input_require_grads()
+        print("gradient checkpointing on", flush=True)
     groups = load_groups(args.groups, args.max_cands)
     print(f"groups={len(groups)}", flush=True)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
@@ -106,18 +120,22 @@ def train(args):
         opt.zero_grad()
         for gi, (q, cands) in enumerate(groups):
             texts = [build_text(q, c["rels"], c["entity"], args.path) for c in cands]
-            batch = tokenize(tok, texts, args.max_len)
-            batch = {k: v.to(dev) for k, v in batch.items()}
-            with torch.autocast("cuda", dtype=bf16):
-                logits = model(batch["input_ids"], batch["attention_mask"])
-                scores = logits[:, 1] - logits[:, 0]
-                labels = torch.tensor([1 if c["label"] else 0 for c in cands], device=dev)
-                pos = labels.nonzero().flatten()
-                if len(pos) == 0:
-                    continue
-                # listwise softmax over candidates, CE on the gold candidates
-                logp = torch.log_softmax(scores, dim=0)
-                loss = -logp[pos].mean() / accum
+            labels = torch.tensor([1 if c["label"] else 0 for c in cands], device=dev)
+            pos = labels.nonzero().flatten()
+            if len(pos) == 0:
+                continue
+            chunk = getattr(args, "chunk", 0) or len(texts)
+            parts = []
+            for i in range(0, len(texts), chunk):
+                batch = tokenize(tok, texts[i:i + chunk], args.max_len)
+                batch = {k: v.to(dev) for k, v in batch.items()}
+                with torch.autocast("cuda", dtype=bf16):
+                    logits = model(batch["input_ids"], batch["attention_mask"])
+                parts.append(logits[:, 1] - logits[:, 0])
+            scores = torch.cat(parts)
+            # listwise softmax over candidates, CE on the gold candidates
+            logp = torch.log_softmax(scores, dim=0)
+            loss = -logp[pos].mean() / accum
             loss.backward()
             if (gi + 1) % accum == 0:
                 opt.step()
@@ -254,6 +272,8 @@ def main():
     t.add_argument("--max-cands", type=int, default=64)
     t.add_argument("--accum", type=int, default=1)
     t.add_argument("--max-len", type=int, default=192)
+    t.add_argument("--grad-ckpt", action="store_true")
+    t.add_argument("--chunk", type=int, default=0)
     t.add_argument("--out", required=True)
 
     e = sub.add_parser("eval")
